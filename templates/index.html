@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Crypto Liquidity Prediction</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            margin: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input[type="number"], input[type="text"] {
+            margin-bottom: 15px;
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            width: 200px; /* Adjust as needed */
+        }
+        button {
+            padding: 10px 15px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        #predictionResult {
+            margin-top: 20px;
+            font-size: 1.1em;
+            font-weight: bold;
+        }
+        .error {
+            color: red;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Cryptocurrency Liquidity Prediction</h1>
+
+    <p>Enter the feature values to get a liquidity prediction.</p>
+
+    <form id="predictionForm">
+        <!-- Input fields for each feature -->
+        <!-- You need an input field for EVERY feature your model expects -->
+        <div>
+            <label for="price">Price:</label>
+            <input type="number" id="price" name="price" step="any" required>
+        </div>
+        <div>
+            <label for="24h_volume">24h Volume:</label>
+            <input type="number" id="24h_volume" name="24h_volume" step="any" required>
+        </div>
+        <div>
+            <label for="price_lag_1">Price Lag 1:</label>
+            <input type="number" id="price_lag_1" name="price_lag_1" step="any" required>
+        </div>
+        <div>
+            <label for="price_lag_7">Price Lag 7:</label>
+            <input type="number" id="price_lag_7" name="price_lag_7" step="any" required>
+        </div>
+        <div>
+            <label for="price_rolling_mean_7">Price Rolling Mean 7:</label>
+            <input type="number" id="price_rolling_mean_7" name="price_rolling_mean_7" step="any" required>
+        </div>
+         <div>
+            <label for="price_rolling_std_7">Price Rolling Std 7:</label>
+            <input type="number" id="price_rolling_std_7" name="price_rolling_std_7" step="any" required>
+        </div>
+        <div>
+            <label for="year">Year:</label>
+            <input type="number" id="year" name="year" required>
+        </div>
+        <div>
+            <label for="month">Month:</label>
+            <input type="number" id="month" name="month" required>
+        </div>
+         <div>
+            <label for="day">Day:</label>
+            <input type="number" id="day" name="day" required>
+        </div>
+        <div>
+            <label for="dayofweek">Day of Week:</label>
+            <input type="number" id="dayofweek" name="dayofweek" required>
+        </div>
+         <div>
+            <label for="dayofyear">Day of Year:</label>
+            <input type="number" id="dayofyear" name="dayofyear" required>
+        </div>
+         <div>
+            <label for="price_diff_rolling_mean_7">Price Diff Rolling Mean 7:</label>
+            <input type="number" id="price_diff_rolling_mean_7" name="price_diff_rolling_mean_7" step="any" required>
+        </div>
+        <!-- Add input fields for all other features your model expects -->
+
+        <button type="submit">Get Prediction</button>
+    </form>
+
+    <div id="predictionResult"></div>
+    <div class="error" id="errorMessage"></div>
+
+    <script>
+        document.getElementById('predictionForm').addEventListener('submit', function(event) {
+            event.preventDefault(); // Prevent the default form submission
+
+            const form = event.target;
+            const formData = new FormData(form);
+            const data = {};
+
+            // Collect data from the form fields
+            formData.forEach((value, key) => {
+                // Convert numerical inputs to numbers
+                data[key] = parseFloat(value);
+            });
+
+            // Wrap the data in a list because the Flask endpoint expects a list of dictionaries
+            const requestData = [data];
+
+            // Send data to the Flask API
+            fetch('/predict', { // Replace '/predict' with your Flask endpoint URL if it's different
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(requestData)
+            })
+            .then(response => {
+                if (!response.ok) {
+                    // Handle HTTP errors
+                    throw new Error('HTTP error! status: ' + response.status);
+                }
+                return response.json();
+            })
+            .then(data => {
+                // Display the prediction result
+                const resultDiv = document.getElementById('predictionResult');
+                const errorDiv = document.getElementById('errorMessage');
+                errorDiv.textContent = ''; // Clear any previous error message
+
+                if (data.prediction) {
+                    resultDiv.textContent = 'Predicted Liquidity: ' + data.prediction[0].toFixed(2); // Display the first prediction (assuming single data point)
+                } else if (data.error) {
+                    errorDiv.textContent = 'API Error: ' + data.error;
+                    resultDiv.textContent = ''; // Clear previous result
+                } else {
+                     errorDiv.textContent = 'Unexpected response from API.';
+                     resultDiv.textContent = ''; // Clear previous result
+                }
+            })
+            .catch(error => {
+                // Handle network or other errors
+                const errorDiv = document.getElementById('errorMessage');
+                errorDiv.textContent = 'Error fetching prediction: ' + error;
+                 document.getElementById('predictionResult').textContent = ''; // Clear previous result
+                console.error('Error:', error);
+            });
+        });
+    </script>
+
+</body>
+</html>
